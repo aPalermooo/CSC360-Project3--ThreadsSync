@@ -148,11 +148,5 @@ class Buffer {
 
 
 
-
-    void display () {
-        for (int i = 0; i < BUFFER_SIZE; i++)
-            std::cout << buffer[i] << " ";
-    }
-
 };
 #endif // _BUFFER_H_DEFINED_
