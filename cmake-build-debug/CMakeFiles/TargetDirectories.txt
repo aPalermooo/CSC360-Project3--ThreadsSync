@@ -1,0 +1,3 @@
+/home/cinnamon/Documents/osystems/test/cmake-build-debug/CMakeFiles/test.dir
+/home/cinnamon/Documents/osystems/test/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/cinnamon/Documents/osystems/test/cmake-build-debug/CMakeFiles/rebuild_cache.dir
