@@ -2,12 +2,15 @@
 // Created by cinnamon on 10/1/24.
 //
 
+#include <cstring>
+
 #include "buffer.h"
 #include <pthread.h>
 #include <semaphore.h>
 #include <iostream>
 #include <unistd.h>
 #include <random>
+#include <string>
 using namespace std;
 
 #define MAX_THREADS 10
@@ -96,39 +99,41 @@ void *consumer(void *arg) {
 }
 
 int displayBuffer(const int condition, const int head, const int tail) {
-    {
-        printf("(buffers occupied: %d)\n"
-               "buffers:\t%5d\t%5d\t%5d\t%5d\t%5d\n"
-               "\t\t\t  ----    ----    ----    ----    ----\n"
-               "\t\t\t   "
-               ,buffer.size,buffer.buffer[0],buffer.buffer[1],buffer.buffer[2],buffer.buffer[3],buffer.buffer[4]);
 
-        int i= 0 ;
-        const char* spacer = "        ";
-        if (head > tail) {
-            for (i = 0; i < tail; i++) {
-                printf(spacer);
-            }
-            printf("W");
-            while (i < head) {
-                printf(spacer);
-                i++;
-            }
-            printf("R\n");
-        } else {
-            for (i = 0; i < head; i++) {
-                printf(spacer);
-            }
-            printf("R");
-            while (i < tail) {
-                printf(spacer);
-                i++;
-            }
-            printf("W\n");
+    //locate where the R and W pointers on the buffer
+    int i= 0 ;
+    string spacer = "        ";
+    string pointerLocations;
+    if (head > tail) {
+        for (i = 0; i < tail; i++) {
+            pointerLocations.append(spacer);
         }
-        printf("\n");
+        pointerLocations.append("W");
+        while (i < head) {
+            pointerLocations.append(spacer);
+            i++;
+        }
+        pointerLocations.append("R");
+    } else {
+        for (i = 0; i < head; i++) {
+            pointerLocations.append(spacer);
+        }
+        pointerLocations.append("R");
+        while (i < tail) {
+            pointerLocations.append(spacer);
+            i++;
+        }
+        pointerLocations.append("W");
+
     }
-    sem_post(&displayMutex);
+
+    //display to console
+    printf("(buffers occupied: %d)\n"
+           "buffers:\t%5d\t%5d\t%5d\t%5d\t%5d\n"
+           "\t\t\t  ----    ----    ----    ----    ----\n"
+           "\t\t\t   %s\n\n"
+           ,buffer.size,buffer.buffer[0],buffer.buffer[1],buffer.buffer[2],buffer.buffer[3],buffer.buffer[4]
+           ,pointerLocations.c_str());
     return 0;
 }
 
