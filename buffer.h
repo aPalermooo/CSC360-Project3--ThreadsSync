@@ -145,8 +145,6 @@ class Buffer {
         sem_post(&empty);
         return true;
     }
-
-
-
 };
+
 #endif // _BUFFER_H_DEFINED_

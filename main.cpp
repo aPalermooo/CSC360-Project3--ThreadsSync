@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <random>
 #include <string>
+#include <atomic>
+#include <cassert>
 using namespace std;
 
 #define MAX_THREADS 25
@@ -19,6 +21,7 @@ pthread_t tid[MAX_THREADS];
 bool VERBOSE_MODE_ON = false;
 static bool running = true;
 static int maxSleepTime = 0;
+static unsigned int seed = time(nullptr);
 
 int itemsProduced[MAX_THREADS];
 int itemsConsumed[MAX_THREADS];
@@ -30,13 +33,13 @@ Buffer buffer = Buffer();
 
 void* producer(void* arg);
 void* consumer(void* arg);
-int displayBuffer(int condition, int head, int tail);
+int displayBuffer(const string& title, int head, int tail);
+
+atomic<int> id(0);
+int numberThread();
 bool isPrime(buffer_item item);
 
-int id;
-int numberThread();
 
-unsigned int seed = time(nullptr);
 
 
 
@@ -108,7 +111,9 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < totalThreads; i++) {
         pthread_join(tid[i], 0);
     }
-
+    if(!VERBOSE_MODE_ON) {
+        printf("Total Threads: %d\n", totalThreads);
+    }
     cout<<"Done"<<endl;
     return 0;
 }
@@ -117,16 +122,16 @@ void* producer(void *args) {
     int sleepTime;
     printf("Hi i'm pro.%i\n", numberThread());
     if (VERBOSE_MODE_ON) { //it is expensive to check if verbose is on every time a thread runs, so it will only check once
+
         sleepTime = rand_r(&seed) % 3;
         sleep(sleepTime);
 
-
         buffer_item producedItem = rand() % 100;
-            printf("producer produced %d\n",producedItem);
+            string outputHeader = "Producer Produced: " + to_string(producedItem);
             if (!buffer.buffer_insert_item(producedItem)) {
-                printf("Full");
+                outputHeader += "\nFull";
             }
-            displayBuffer(1,buffer.head, buffer.tail);
+            displayBuffer(outputHeader,buffer.head, buffer.tail);
     }
     else {
         sleepTime = rand_r(&seed) % 3;
@@ -150,14 +155,14 @@ void *consumer(void *arg) {
         sleep(sleepTime);
 
         if (!buffer.buffer_remove_item(&consumedItem)) {
-            printf("Empty\n");
+            string outputHeader = "Empty";
         } else {
             if (isPrime(consumedItem))
-                printf("consumer consumed %d\t*****PRIME NUMBER*****\n", consumedItem);
+                string outputHeader = "consumer consumed " + to_string(consumedItem) + "\t*****PRIME NUMBER*****";
             else
-                printf("consumer consumed %d \n", consumedItem);
+                string outputHeader = "consumer consumed " + to_string(consumedItem);
         }
-        displayBuffer(2,buffer.head, buffer.tail);
+        displayBuffer(outputHeader,buffer.head, buffer.tail);
     } else {
 
         sleepTime = rand_r(&seed) % 3;
@@ -174,11 +179,12 @@ void *consumer(void *arg) {
     }
     pthread_exit(0);
 }
+
 int numberThread() {
     return id++;
 }
 
-int displayBuffer(const int condition, const int head, const int tail) {
+int displayBuffer(const string& title, const int head, const int tail) {
 
     //locate where the R and W pointers on the buffer
     int i= 0 ;
@@ -208,11 +214,12 @@ int displayBuffer(const int condition, const int head, const int tail) {
     }
 
     //display to console
-    printf("(buffers occupied: %d)\n"
+    printf("%s\n"
+        "(buffers occupied: %d)\n"
            "buffers:\t%5d\t%5d\t%5d\t%5d\t%5d\n"
            "\t\t\t  ----    ----    ----    ----    ----\n"
            "\t\t\t   %s\n\n"
-           ,buffer.size,buffer.buffer[0],buffer.buffer[1],buffer.buffer[2],buffer.buffer[3],buffer.buffer[4]
+           ,title.c_str(),buffer.size,buffer.buffer[0],buffer.buffer[1],buffer.buffer[2],buffer.buffer[3],buffer.buffer[4]
            ,pointerLocations.c_str());
     return 0;
 }
