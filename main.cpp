@@ -151,7 +151,7 @@ void *consumer(void *arg) {
     buffer_item consumedItem;
     // printf("Hi i'm con.%i\n", numberThread());
     int sleepTime;
-
+    cout<<VERBOSE_MODE_ON<<endl;
     if (VERBOSE_MODE_ON) {
         string outputHeader;
         sleepTime = rand_r(&seed) % 3;
