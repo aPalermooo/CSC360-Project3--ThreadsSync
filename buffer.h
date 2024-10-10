@@ -86,7 +86,7 @@ class Buffer {
      * @param item  the item to be inserted into the buffer
      *
      * @return      true if the item was successfully inserted into the buffer
-     *              false if the item was unable to be inserted into the buffer
+     * @return     false if the item was unable to be inserted into the buffer
      *                  (such as in the case of the buffer being full)
      *
      *****************************************/
@@ -123,7 +123,7 @@ class Buffer {
     * @param item   REFERENCE to location the removed item will be stored to
     *
     * @return       true if the item was successfully removed from the buffer
-    *               false if the item was unable to be removed from the buffer
+    * @return       false if the item was unable to be removed from the buffer
     *                   (such as in the case of the buffer being empty)
     *
     *****************************************/

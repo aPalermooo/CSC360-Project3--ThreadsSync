@@ -49,8 +49,8 @@ cmake_ninja_workdir = /home/cinnamon/Documents/osystems/test/cmake-build-debug/
 
 build cmake_object_order_depends_target_test: phony || .
 
-build CMakeFiles/test.dir/main.cpp.o: CXX_COMPILER__test_unscanned_Debug /home/cinnamon/Documents/osystems/test/main.cpp || cmake_object_order_depends_target_test
-  DEP_FILE = CMakeFiles/test.dir/main.cpp.o.d
+build CMakeFiles/test.dir/osproj4.cpp.o: CXX_COMPILER__test_unscanned_Debug /home/cinnamon/Documents/osystems/test/osproj4.cpp || cmake_object_order_depends_target_test
+  DEP_FILE = CMakeFiles/test.dir/osproj4.cpp.o.d
   FLAGS = -g -std=gnu++14 -fdiagnostics-color=always
   OBJECT_DIR = CMakeFiles/test.dir
   OBJECT_FILE_DIR = CMakeFiles/test.dir
@@ -63,7 +63,7 @@ build CMakeFiles/test.dir/main.cpp.o: CXX_COMPILER__test_unscanned_Debug /home/c
 #############################################
 # Link the executable test
 
-build test: CXX_EXECUTABLE_LINKER__test_Debug CMakeFiles/test.dir/main.cpp.o
+build test: CXX_EXECUTABLE_LINKER__test_Debug CMakeFiles/test.dir/osproj4.cpp.o
   FLAGS = -g
   OBJECT_DIR = CMakeFiles/test.dir
   POST_BUILD = :
