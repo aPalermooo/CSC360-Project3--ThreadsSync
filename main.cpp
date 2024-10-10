@@ -18,7 +18,7 @@ using namespace std;
 #define MAX_THREADS 25
 pthread_t tid[MAX_THREADS];
 
-bool VERBOSE_MODE_ON = false;
+char VERBOSE = 'n';
 static bool running = true;
 static int maxSleepTime = 0;
 static unsigned int seed = time(nullptr);
@@ -84,9 +84,7 @@ int main(int argc, char* argv[]) {
         return 2;
     }
 
-    const char VERBOSE = *argv[5];
-    if (VERBOSE == 'y')
-        VERBOSE_MODE_ON = true;
+    VERBOSE = *argv[5];
 
     //init threads
 
@@ -96,7 +94,7 @@ int main(int argc, char* argv[]) {
     //create and assign threads
     cout<<"Starting threads..."<<endl;
 
-    if (VERBOSE_MODE_ON) {
+    if (VERBOSE == 'y') {
         string initHeader = "hello world";
         displayBuffer(initHeader,buffer.head, buffer.tail);
     }
@@ -112,17 +110,13 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < totalThreads; i++) {
         pthread_join(tid[i], 0);
     }
-    if(!VERBOSE_MODE_ON) {
-        printf("Total Threads: %d\n", totalThreads);
-    }
     cout<<"Done"<<endl;
     return 0;
 }
 
 void* producer(void *args) {
     int sleepTime;
-    // printf("Hi i'm pro.%i\n", numberThread());
-    if (VERBOSE_MODE_ON) { //it is expensive to check if verbose is on every time a thread runs, so it will only check once
+    if (VERBOSE == 'y') { //it is expensive to check if verbose is on every time a thread runs, so it will only check once
         string outputHeader;
 
         sleepTime = rand_r(&seed) % 3;
@@ -149,10 +143,8 @@ void* producer(void *args) {
 
 void *consumer(void *arg) {
     buffer_item consumedItem;
-    // printf("Hi i'm con.%i\n", numberThread());
     int sleepTime;
-    cout<<VERBOSE_MODE_ON<<endl;
-    if (VERBOSE_MODE_ON) {
+    if (VERBOSE == 'y') {
         string outputHeader;
         sleepTime = rand_r(&seed) % 3;
         sleep(sleepTime);
