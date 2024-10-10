@@ -12,7 +12,6 @@
 #include <random>
 #include <string>
 #include <atomic>
-#include <cassert>
 using namespace std;
 
 #define MAX_THREADS 25
@@ -23,24 +22,23 @@ static bool running = true;
 static int maxSleepTime = 0;
 static unsigned int seed = time(nullptr);
 
-int itemsProduced[MAX_THREADS];
-int itemsConsumed[MAX_THREADS];
-int countBufferFull;
-int countBufferEmpty;
+int actionsPerformed[MAX_THREADS * 2];
+atomic<int> countBufferFull;
+atomic<int> countBufferEmpty;
 
 Buffer buffer = Buffer();
 
 
 void* producer(void* arg);
 void* consumer(void* arg);
-void displayBuffer(const string& title, int head, int tail) ;
+void displayBuffer(const string& TITLE, int head, int tail);
+void displayFinalStats (const int &SIMULATION_TIME, const int &NUM_PRODUCERS, const int &NUM_CONSUMERS);
 
-atomic<int> id(0);
-int numberThread();
+sem_t numberMutex;
+int pro_id(0);
+int con_id(0);
+int numberProcess(int PROCESS_TYPE);
 bool isPrime(buffer_item item);
-
-
-
 
 
 
@@ -53,6 +51,7 @@ bool isPrime(buffer_item item);
  */
 int main(int argc, char* argv[]) {
 
+    sem_init(&numberMutex, 0, 1);
 
     //validate parameters
     string invalidArgMsg = "INVALID ARGUMENTS!!\n"
@@ -73,6 +72,8 @@ int main(int argc, char* argv[]) {
     const int NUM_PRODUCERS = atoi(argv[3]);
     const int NUM_CONSUMERS = atoi(argv[4]);
 
+    con_id = NUM_PRODUCERS;
+
     // if any param is invalid or set to 0 return 1
     if (MAX_RUN_TIME == 0 || maxSleepTime == 0 || NUM_PRODUCERS == 0 || NUM_CONSUMERS == 0) {
         printf("%s", invalidArgMsg.c_str());
@@ -86,8 +87,8 @@ int main(int argc, char* argv[]) {
 
     VERBOSE = *argv[5];
 
-    //init threads
 
+    //init threads
     pthread_attr_t attr;
     pthread_attr_init(&attr);
 
@@ -95,8 +96,7 @@ int main(int argc, char* argv[]) {
     cout<<"Starting threads..."<<endl;
 
     if (VERBOSE == 'y') {
-        string initHeader = "hello world";
-        displayBuffer(initHeader,buffer.head, buffer.tail);
+        displayBuffer("",buffer.head, buffer.tail);
     }
     for (int i = 0; i < NUM_PRODUCERS; i++) {
         pthread_create(&tid[i], &attr, producer, 0);
@@ -104,84 +104,120 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < NUM_CONSUMERS; i++) {
         pthread_create(&tid[i+NUM_PRODUCERS], &attr, consumer, 0);
     }
-
+    sleep(MAX_RUN_TIME);
+    running = false;
     //rejoin all threads
     int totalThreads = NUM_PRODUCERS + NUM_CONSUMERS;
     for (int i = 0; i < totalThreads; i++) {
         pthread_join(tid[i], 0);
     }
-    cout<<"Done"<<endl;
+    // cout<<"Done"<<endl;
+    // cout<<"Total times full:  " << countBufferFull << endl;
+    // cout<<"Total times empty:  " << countBufferEmpty << endl;
+
+    displayFinalStats(MAX_RUN_TIME, NUM_PRODUCERS, NUM_CONSUMERS);
+
     return 0;
 }
 
 void* producer(void *args) {
     int sleepTime;
+    int process_ID = getpid();
+    int ref_ID = numberProcess(1);
     if (VERBOSE == 'y') { //it is expensive to check if verbose is on every time a thread runs, so it will only check once
         string outputHeader;
 
-        sleepTime = rand_r(&seed) % 3;
-        sleep(sleepTime);
+        while (running) {
+            sleepTime = rand_r(&seed) % 3;
+            sleep(sleepTime);
 
-        buffer_item producedItem = rand() % 100;
-            outputHeader = "Producer Produced: " + to_string(producedItem);
+            buffer_item producedItem = rand() % 100;
             if (!buffer.buffer_insert_item(producedItem)) {
-                outputHeader += "\nFull";
+                countBufferFull++;
+                printf("All buffers full. Producer %d waits.\n\n", process_ID);
+                continue;
             }
+            outputHeader = "Producer " + to_string(process_ID) + " writes " + to_string(producedItem);
+            actionsPerformed[ref_ID]++;
             displayBuffer(outputHeader,buffer.head, buffer.tail);
+        }
     }
     else {
-        sleepTime = rand_r(&seed) % 3;
-        sleep(sleepTime);
+        while (running) {
+            sleepTime = rand_r(&seed) % 3;
+            sleep(sleepTime);
 
-
-        buffer_item producedItem = rand() % 100;
+            buffer_item producedItem = rand() % 100;
             if (!buffer.buffer_insert_item(producedItem)) {
+                countBufferFull++;
+                continue;
             }
+            actionsPerformed[ref_ID]++;
         }
+        }
+    printf("PRODUCER-%d ref %d\tProduced %d\n\n",process_ID,ref_ID,actionsPerformed[ref_ID]);
     pthread_exit(0);
 }
 
 void *consumer(void *arg) {
     buffer_item consumedItem;
     int sleepTime;
+    int process_ID = getpid();
+    int ref_ID = numberProcess(2);
     if (VERBOSE == 'y') {
         string outputHeader;
-        sleepTime = rand_r(&seed) % 3;
-        sleep(sleepTime);
+        while (running) {
+            sleepTime = rand_r(&seed) % 3;
+            sleep(sleepTime);
 
 
-        if (!buffer.buffer_remove_item(&consumedItem)) {
-            outputHeader = "Empty";
-        } else {
-            if (isPrime(consumedItem))
-                outputHeader = "consumer consumed " + to_string(consumedItem) + "\t*****PRIME NUMBER*****";
-            else
-                outputHeader = "consumer consumed " + to_string(consumedItem);
+            if (!buffer.buffer_remove_item(&consumedItem)) {
+                countBufferEmpty++;
+                printf("All buffers empty. Consumer %d waits.\n\n", process_ID);
+                continue;
+            } else {
+                if (isPrime(consumedItem))
+                    outputHeader = "Consumer " + to_string(process_ID) + " reads " + to_string(consumedItem) + "\t*****PRIME NUMBER*****";
+                else
+                    outputHeader = "Consumer " + to_string(process_ID) + " reads " + to_string(consumedItem);
+
+                actionsPerformed[ref_ID]++;
+            }
+            displayBuffer(outputHeader,buffer.head, buffer.tail);
         }
-        // string header = "Hello World";
-        displayBuffer(outputHeader,buffer.head, buffer.tail);
     } else {
+        while (running) {
+            sleepTime = rand_r(&seed) % 3;
+            sleep(sleepTime);
 
-        sleepTime = rand_r(&seed) % 3;
-        sleep(sleepTime);
-
-        if (!buffer.buffer_remove_item(&consumedItem)) {
-
-        } else {
-            if (isPrime(consumedItem));
-
-            else;
-
+            if (!buffer.buffer_remove_item(&consumedItem)) {
+                countBufferEmpty++;
+                continue;
+            } else {
+                    actionsPerformed[ref_ID]++;
+            }
         }
     }
+    // printf("CONSUMER-%d ref %d\tProduced %d\n\n",process_ID,ref_ID,actionsPerformed[ref_ID]);
     pthread_exit(0);
 }
 
-int numberThread() {
-    return id++;
+int numberProcess(const int PROCESS_TYPE) {
+    sem_wait(&numberMutex);
+    int ref_ID = -1;
+    if (PROCESS_TYPE == 1) {
+        ref_ID = pro_id;
+        pro_id += 1;
+    }
+    if (PROCESS_TYPE == 2) {
+        ref_ID = con_id;
+        con_id += 1;
+    }
+    sem_post(&numberMutex);
+    return ref_ID;
 }
 
-void displayBuffer(const string& title, const int head, const int tail) {
+void displayBuffer(const string& TITLE, const int head, const int tail) {
 
     //locate where the R and W pointers on the buffer
     int i= 0 ;
@@ -216,8 +252,47 @@ void displayBuffer(const string& title, const int head, const int tail) {
            "buffers:\t%5d\t%5d\t%5d\t%5d\t%5d\n"
            "\t\t\t  ----    ----    ----    ----    ----\n"
            "\t\t\t   %s\n\n"
-           ,title.c_str(),buffer.size,buffer.buffer[0],buffer.buffer[1],buffer.buffer[2],buffer.buffer[3],buffer.buffer[4]
+           ,TITLE.c_str(),buffer.size,buffer.buffer[0],buffer.buffer[1],buffer.buffer[2],buffer.buffer[3],buffer.buffer[4]
            ,pointerLocations.c_str());
+}
+
+void displayFinalStats (const int &SIMULATION_TIME, const int &NUM_PRODUCERS, const int &NUM_CONSUMERS) {
+    int totalProduced (0), totalConsumed (0);
+    int index;
+    for (index = 0; index < NUM_PRODUCERS; index++) {
+        totalProduced += actionsPerformed[index];
+    }
+    for (index = 0; index < NUM_CONSUMERS; index++) {
+        totalConsumed += actionsPerformed[index+NUM_PRODUCERS];
+    }
+    string finalMessage =   "PRODUCER / CONSUMER SIMULATION COMPLETE \n"
+                            "========================================\n"
+                            "Simulation Time:\t\t\t\t\t\t" + to_string(SIMULATION_TIME) + "\n"
+                            "Maximum Thread Sleep Time:\t\t\t\t" + to_string(maxSleepTime) + "\n"
+                            "Number of Producer Threads:\t\t\t\t" + to_string(NUM_PRODUCERS) + "\n"
+                            "Number of Consumer Threads:\t\t\t\t" + to_string(NUM_CONSUMERS) + "\n"
+                            "Size of Buffer:\t\t\t\t\t\t\t" + to_string(buffer.size) + "\n"
+                            "\n"
+                            "Total Number of Items Produced:\t\t\t" + to_string(totalProduced) + "\n";
+    for (index = 0; index < NUM_PRODUCERS; index++) {
+        finalMessage +=     "\tThread " + to_string(index) + ":\t\t\t\t\t\t\t" + to_string(actionsPerformed[index]) + "\n";
+    }
+    finalMessage +=         "\n"
+                            "Total Number of Items Consumed:\t\t\t" + to_string(totalConsumed) + "\n";
+    for (; index < NUM_CONSUMERS + NUM_PRODUCERS; index++) {
+        finalMessage +=     "\tThread " + to_string(index) + ":\t\t\t\t\t\t\t" + to_string(actionsPerformed[index]) + "\n";
+    }
+
+    finalMessage +=        "\n"
+                           "Number Of Items Remaining in Buffer:\t" + to_string(buffer.size) + "\n"
+                           "Number Of Times Buffer was Full:\t\t" + to_string(countBufferFull) + "\n"
+                           "Number Of Times Buffer was Empty:\t\t" + to_string(countBufferEmpty) + "\n";
+
+    // for (int entry : actionsPerformed) {
+    //     cout << entry << "\n";
+    // }
+
+    cout << finalMessage;
 }
 
 bool isPrime(buffer_item item) {
@@ -230,3 +305,4 @@ bool isPrime(buffer_item item) {
     }
     return true;
 }
+
