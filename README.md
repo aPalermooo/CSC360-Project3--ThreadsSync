@@ -5,7 +5,7 @@ https://github.com/aPalermooo/CSC360-Project3--ThreadsSync/
 
 then cd into the folder and run the following commands
 
-g++ buffer.h osproj4.cpp -o osproj4
-./osproj4 30 3 2 2 y
+>g++ buffer.h osproj4.cpp -o osproj4
+>./osproj4 30 3 2 2 y
 
 *note that instead of typing y, the parameter is only a char type*
